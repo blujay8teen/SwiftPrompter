@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SwiftPrompter</title>
+    
+    <!-- FAVICON: Blue Monitor with Play Button -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233b82f6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='2' y='3' width='20' height='14' rx='2' ry='2'/><line x1='8' y1='21' x2='16' y2='21'/><line x1='12' y1='17' x2='12' y2='21'/><polygon points='10 9 15 12 10 15 10 9' fill='%233b82f6' stroke='none'/></svg>">
+
     <!-- Tailwind CSS for rapid, lightweight styling -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Lucide Icons for clean UI elements -->
@@ -213,8 +217,13 @@
                 </div>
             </div>
 
+            <!-- RESTORE UI FLOATING BUTTON (Hidden by default) -->
+            <button id="restore-ui-btn" onclick="toggleControlsVisibility()" class="hidden absolute bottom-6 right-6 z-[60] p-4 rounded-full bg-blue-600/80 hover:bg-blue-500 backdrop-blur text-white shadow-lg transition-all hover:scale-105" title="Show Controls">
+                <i data-lucide="eye"></i>
+            </button>
+
             <!-- Floating Controls Toolbar -->
-            <div id="controls" class="absolute bottom-0 left-0 right-0 bg-gray-900/90 backdrop-blur-sm border-t border-gray-800 p-4 transition-transform duration-300 transform translate-y-0 hover:translate-y-0 z-50">
+            <div id="controls" class="absolute bottom-0 left-0 right-0 bg-gray-900/90 backdrop-blur-sm border-t border-gray-800 p-4 transition-transform duration-300 transform translate-y-0 z-50">
                 
                 <!-- Top Row: Sliders & Colors -->
                 <div class="flex flex-wrap justify-center items-end gap-6 mb-4 px-4 max-w-5xl mx-auto">
@@ -304,8 +313,8 @@
                         <i data-lucide="flip-horizontal"></i>
                     </button>
 
-                    <!-- Hide UI Toggle (Visual only) -->
-                    <button onclick="toggleControlsVisibility()" class="p-3 rounded-full hover:bg-gray-800 text-gray-400 hover:text-white transition-colors sm:hidden" title="Hide Controls">
+                    <!-- Hide UI Toggle -->
+                    <button onclick="toggleControlsVisibility()" class="p-3 rounded-full hover:bg-gray-800 text-gray-400 hover:text-white transition-colors" title="Hide Controls">
                         <i data-lucide="eye-off"></i>
                     </button>
                 </div>
@@ -330,7 +339,8 @@
             eyeContactMode: false,
             enableCountdown: false,
             cameraActive: false,
-            wakeLock: null
+            wakeLock: null,
+            uiHidden: false
         };
 
         // --- DOM Elements ---
@@ -355,7 +365,9 @@
             countdownOverlay: document.getElementById('countdown-overlay'),
             countdownText: document.getElementById('countdown-text'),
             cameraFeed: document.getElementById('camera-feed'),
-            cameraBtn: document.getElementById('camera-btn')
+            cameraBtn: document.getElementById('camera-btn'),
+            controls: document.getElementById('controls'),
+            restoreUiBtn: document.getElementById('restore-ui-btn')
         };
 
         // --- Initialization ---
@@ -406,6 +418,9 @@
             updateColors(state.bgColor, state.textColor);
             updateGuideStyle(state.guideStyle);
             
+            // Ensure UI is visible
+            if (state.uiHidden) toggleControlsVisibility();
+
             // History Management
             if (pushHistory) {
                 const url = new URL(window.location);
@@ -452,6 +467,23 @@
             if(confirm('Are you sure you want to clear the script?')) {
                 els.input.value = '';
                 localStorage.removeItem('swiftPrompter_script');
+            }
+        }
+
+        // --- UI Visibility Logic ---
+        function toggleControlsVisibility() {
+            state.uiHidden = !state.uiHidden;
+
+            if (state.uiHidden) {
+                // Hide Controls (Slide Down)
+                els.controls.classList.add('translate-y-full');
+                // Show Restore Button
+                els.restoreUiBtn.classList.remove('hidden');
+            } else {
+                // Show Controls (Slide Up)
+                els.controls.classList.remove('translate-y-full');
+                // Hide Restore Button
+                els.restoreUiBtn.classList.add('hidden');
             }
         }
 
