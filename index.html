@@ -194,9 +194,6 @@
         <!-- Removed bg-black to allow dynamic color -->
         <div id="prompter-view" class="hidden absolute inset-0 z-50 flex flex-col" style="background-color: #000000;">
             
-            <!-- Self-View Video Feed (Background) -->
-            <video id="camera-feed" class="absolute inset-0 w-full h-full object-cover hidden opacity-40 z-0 pointer-events-none" autoplay playsinline muted></video>
-
             <!-- Countdown Overlay -->
             <div id="countdown-overlay" class="hidden absolute inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm pointer-events-none">
                 <span id="countdown-text" class="text-[10rem] font-bold text-white animate-pulse">3</span>
@@ -273,16 +270,6 @@
                         </select>
                     </div>
 
-                    <!-- Microphone Select (NEW) -->
-                    <div class="flex flex-col items-start gap-1 w-full sm:w-auto">
-                        <div class="text-xs text-gray-400 uppercase font-bold tracking-wider">
-                            <span>Mic</span>
-                        </div>
-                        <select id="mic-select" class="bg-gray-800 text-gray-200 text-sm rounded border border-gray-700 px-2 py-1 focus:outline-none focus:border-blue-500 w-full sm:w-32 max-w-[150px] truncate">
-                            <option value="">Default</option>
-                        </select>
-                    </div>
-
                     <!-- Extra Features Toggles -->
                     <div class="flex flex-col items-start gap-1">
                         <div class="text-xs text-gray-400 uppercase font-bold tracking-wider">
@@ -311,15 +298,6 @@
                         <i data-lucide="rotate-ccw"></i>
                     </button>
                     
-                    <button onclick="toggleCamera()" id="camera-btn" class="p-3 rounded-full hover:bg-gray-800 text-gray-400 hover:text-white transition-colors" title="Toggle Self-View Camera">
-                        <i data-lucide="video"></i>
-                    </button>
-                    
-                    <!-- RECORD Button -->
-                    <button onclick="toggleRecording()" id="record-btn" class="p-3 rounded-full hover:bg-gray-800 text-gray-400 hover:text-white transition-colors" title="Record Video">
-                        <i data-lucide="circle-dashed"></i>
-                    </button>
-
                     <button id="play-btn" onclick="togglePlay()" class="p-4 rounded-full bg-blue-600 hover:bg-blue-500 text-white shadow-lg transition-transform active:scale-95 mx-2">
                         <i data-lucide="play" class="fill-current"></i>
                     </button>
@@ -353,13 +331,8 @@
             guideStyle: 'guide-arrows',
             eyeContactMode: false,
             enableCountdown: false,
-            cameraActive: false,
-            isRecording: false,
-            mediaRecorder: null,
-            recordedChunks: [],
             wakeLock: null,
-            uiHidden: false,
-            selectedMic: ''
+            uiHidden: false
         };
 
         // --- DOM Elements ---
@@ -378,15 +351,11 @@
             bgPicker: document.getElementById('bg-color-picker'),
             textPicker: document.getElementById('text-color-picker'),
             guideSelect: document.getElementById('guide-select'),
-            micSelect: document.getElementById('mic-select'),
             readingGuide: document.getElementById('reading-guide'),
             eyeContactBtn: document.getElementById('toggle-eye-contact'),
             countdownBtn: document.getElementById('toggle-countdown'),
             countdownOverlay: document.getElementById('countdown-overlay'),
             countdownText: document.getElementById('countdown-text'),
-            cameraFeed: document.getElementById('camera-feed'),
-            cameraBtn: document.getElementById('camera-btn'),
-            recordBtn: document.getElementById('record-btn'),
             controls: document.getElementById('controls'),
             restoreUiBtn: document.getElementById('restore-ui-btn')
         };
@@ -397,14 +366,6 @@
         // Restore script from local storage if available
         const savedScript = localStorage.getItem('swiftPrompter_script');
         if (savedScript) els.input.value = savedScript;
-
-        // Try to list audio devices on load (might have generic names if permission not granted yet)
-        getAudioInputDevices();
-
-        // Listen for new devices (plug/unplug)
-        if (navigator.mediaDevices) {
-            navigator.mediaDevices.ondevicechange = getAudioInputDevices;
-        }
 
         // Handle URL params on load (Deep linking capability)
         window.addEventListener('load', () => {
@@ -471,8 +432,6 @@
 
         async function exitPrompter() {
             stopScroll();
-            // Release Camera if active (also stops recording)
-            if (state.cameraActive) toggleCamera();
             // Release Wake Lock
             releaseWakeLock();
 
@@ -646,173 +605,6 @@
             } else {
                  els.playBtn.classList.add('bg-blue-600', 'hover:bg-blue-500');
                  els.playBtn.classList.remove('bg-red-600', 'hover:bg-red-500');
-            }
-        }
-
-        // --- Audio Source Listing ---
-        
-        async function getAudioInputDevices() {
-            try {
-                if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
-                    return; // API not supported
-                }
-
-                const devices = await navigator.mediaDevices.enumerateDevices();
-                const audioInputs = devices.filter(device => device.kind === 'audioinput');
-                
-                const currentSelection = els.micSelect.value;
-                
-                // Clear existing options except default if we want
-                els.micSelect.innerHTML = '<option value="">Default</option>';
-                
-                if (audioInputs.length === 0) return;
-
-                audioInputs.forEach((device, index) => {
-                    const option = document.createElement('option');
-                    option.value = device.deviceId;
-                    // If label is empty (permission not granted), show index
-                    option.text = device.label || `Microphone ${index + 1}`;
-                    els.micSelect.appendChild(option);
-                });
-
-                // Restore previous selection if valid
-                if (currentSelection && Array.from(els.micSelect.options).some(o => o.value === currentSelection)) {
-                    els.micSelect.value = currentSelection;
-                }
-            } catch (err) {
-                console.error("Error enumerating devices:", err);
-            }
-        }
-
-        els.micSelect.addEventListener('change', async (e) => {
-            state.selectedMic = e.target.value;
-            // If camera/mic is already active, restart it to switch source
-            if (state.cameraActive) {
-                await toggleCamera(); // Stop
-                await toggleCamera(); // Start new
-            }
-        });
-
-        // --- Camera & Recording Logic ---
-        
-        async function toggleCamera() {
-            // If recording, stop recording first
-            if (state.isRecording) {
-                toggleRecording(); // Stop
-            }
-
-            state.cameraActive = !state.cameraActive;
-            
-            if (state.cameraActive) {
-                try {
-                    // Constraints: Video + selected Audio
-                    const constraints = {
-                        video: { facingMode: "user" },
-                        audio: state.selectedMic ? { deviceId: { exact: state.selectedMic } } : true
-                    };
-
-                    const stream = await navigator.mediaDevices.getUserMedia(constraints); 
-                    
-                    els.cameraFeed.srcObject = stream;
-                    els.cameraFeed.classList.remove('hidden');
-                    els.cameraBtn.classList.add('text-blue-500', 'bg-gray-800');
-                    
-                    // Refresh device list now that we have permissions (to get real labels)
-                    getAudioInputDevices();
-
-                } catch (err) {
-                    console.error("Camera access denied or error:", err);
-                    alert("Could not access camera/microphone. Please check permissions.");
-                    state.cameraActive = false;
-                }
-            } else {
-                const stream = els.cameraFeed.srcObject;
-                if (stream) {
-                    const tracks = stream.getTracks();
-                    tracks.forEach(track => track.stop());
-                }
-                els.cameraFeed.srcObject = null;
-                els.cameraFeed.classList.add('hidden');
-                els.cameraBtn.classList.remove('text-blue-500', 'bg-gray-800');
-            }
-        }
-
-        async function toggleRecording() {
-            if (state.isRecording) {
-                // Stop Recording
-                state.mediaRecorder.stop();
-                state.isRecording = false;
-                els.recordBtn.classList.remove('text-red-500', 'animate-pulse');
-                els.recordBtn.innerHTML = `<i data-lucide="circle-dashed"></i>`;
-                lucide.createIcons();
-            } else {
-                // Start Recording
-                if (!state.cameraActive) {
-                    await toggleCamera();
-                    if (!state.cameraActive) return; // User denied permission
-                }
-                
-                const stream = els.cameraFeed.srcObject;
-                if (!stream) return;
-
-                // Browser Support Check (Priority: MP4 -> MKV -> WebM)
-                let options = { mimeType: 'video/mp4' };
-                if (!MediaRecorder.isTypeSupported(options.mimeType)) {
-                     // Fallback 1: MKV
-                     options = { mimeType: 'video/x-matroska' };
-                     if (!MediaRecorder.isTypeSupported(options.mimeType)) {
-                         // Fallback 2: WebM (Standard backup if specific formats fail)
-                         options = { mimeType: 'video/webm' };
-                         if (!MediaRecorder.isTypeSupported(options.mimeType)) {
-                             options = undefined; // Let browser choose default
-                         }
-                     }
-                }
-
-                try {
-                    state.recordedChunks = [];
-                    state.mediaRecorder = new MediaRecorder(stream, options);
-
-                    state.mediaRecorder.ondataavailable = (event) => {
-                        if (event.data.size > 0) state.recordedChunks.push(event.data);
-                    };
-
-                    state.mediaRecorder.onstop = () => {
-                        // Use the mimeType from the recorder if the original options were undefined
-                        const type = (state.mediaRecorder.mimeType || 'video/webm').split(';')[0];
-                        const blob = new Blob(state.recordedChunks, { type: type });
-                        const url = URL.createObjectURL(blob);
-                        const a = document.createElement('a');
-                        a.style.display = 'none';
-                        a.href = url;
-                        // Timestamped filename
-                        const dateStr = new Date().toISOString().slice(0,19).replace(/:/g,"-");
-                        
-                        // Determine extension
-                        let ext = 'webm';
-                        if (type.includes('mp4')) ext = 'mp4';
-                        else if (type.includes('matroska')) ext = 'mkv';
-                        
-                        a.download = `swiftprompter-video-${dateStr}.${ext}`; 
-                        
-                        document.body.appendChild(a);
-                        a.click();
-                        window.URL.revokeObjectURL(url);
-                        alert(`Recording saved as .${ext}!\nCheck your Downloads folder.`);
-                    };
-
-                    state.mediaRecorder.start();
-                    state.isRecording = true;
-                    
-                    // UI Updates
-                    els.recordBtn.classList.add('text-red-500', 'animate-pulse');
-                    els.recordBtn.innerHTML = `<i data-lucide="square" class="fill-current"></i>`; // Stop icon
-                    lucide.createIcons();
-
-                } catch (err) {
-                    console.error("Error starting recording:", err);
-                    alert("Could not start recording. Your browser might not support this.");
-                }
             }
         }
 
