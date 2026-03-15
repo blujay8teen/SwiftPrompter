@@ -4,115 +4,75 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SwiftPrompter</title>
-    
-    <!-- FAVICON: Blue Monitor with Play Button -->
+
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233b82f6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='2' y='3' width='20' height='14' rx='2' ry='2'/><line x1='8' y1='21' x2='16' y2='21'/><line x1='12' y1='17' x2='12' y2='21'/><polygon points='10 9 15 12 10 15 10 9' fill='%233b82f6' stroke='none'/></svg>">
 
-    <!-- Tailwind CSS for rapid, lightweight styling -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Lucide Icons for clean UI elements -->
     <script src="https://unpkg.com/lucide@latest"></script>
+
     <style>
-        /* Custom scrollbar hiding for cleaner prompter view */
-        .no-scrollbar::-webkit-scrollbar {
-            display: none;
-        }
-        .no-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
-        
-        /* Smooth transition for font size changes */
+        /* dvh accounts for mobile browser chrome (address bar etc.) */
+        html, body { height: 100dvh; overflow: hidden; }
+
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
         #prompter-text {
             transition: font-size 0.2s ease, color 0.3s ease;
-            line-height: 1.5;
+            line-height: 1.65;
         }
+        #prompter-view { transition: background-color 0.3s ease; }
+        .mirror-x { transform: scaleX(-1); }
 
-        #prompter-view {
-            transition: background-color 0.3s ease;
+        /* Sliders — larger thumb for touch, clean track */
+        input[type=range] { -webkit-appearance: none; background: transparent; width: 100%; }
+        input[type=range]::-webkit-slider-runnable-track {
+            height: 4px; background: #4b5563; border-radius: 2px; cursor: pointer;
         }
-
-        /* Mirror effect class */
-        .mirror-x {
-            transform: scaleX(-1);
-        }
-
-        /* Range slider custom styling */
-        input[type=range] {
-            -webkit-appearance: none; 
-            background: transparent; 
-        }
-        
         input[type=range]::-webkit-slider-thumb {
             -webkit-appearance: none;
-            height: 16px;
-            width: 16px;
+            width: 22px; height: 22px;
             border-radius: 50%;
             background: #3b82f6;
-            margin-top: -6px;
+            margin-top: -9px;
             cursor: pointer;
+            transition: background 0.15s;
+        }
+        input[type=range]::-webkit-slider-thumb:hover { background: #60a5fa; }
+        input[type=range]::-moz-range-track {
+            height: 4px; background: #4b5563; border-radius: 2px;
+        }
+        input[type=range]::-moz-range-thumb {
+            width: 22px; height: 22px;
+            border-radius: 50%; border: none;
+            background: #3b82f6; cursor: pointer;
         }
 
-        input[type=range]::-webkit-slider-runnable-track {
-            width: 100%;
-            height: 4px;
-            cursor: pointer;
-            background: #4b5563;
-            border-radius: 2px;
-        }
-
-        /* Color Picker Reset */
+        /* Color pickers */
         input[type="color"] {
             -webkit-appearance: none;
-            border: none;
-            width: 32px;
-            height: 32px;
-            padding: 0;
-            overflow: hidden;
-            border-radius: 50%;
-            cursor: pointer;
+            width: 34px; height: 34px;
+            padding: 0; border: none;
+            border-radius: 50%; overflow: hidden; cursor: pointer;
         }
-        input[type="color"]::-webkit-color-swatch-wrapper {
-            padding: 0;
-        }
-        input[type="color"]::-webkit-color-swatch {
-            border: none;
-            border-radius: 50%;
-            border: 2px solid #4b5563;
-        }
+        input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+        input[type="color"]::-webkit-color-swatch { border: 2px solid #4b5563; border-radius: 50%; }
 
-        /* --- Reading Guide Styles --- */
+        /* Reading guide */
         .reading-guide {
-            position: fixed;
-            top: 40%;
-            left: 0;
-            right: 0;
-            display: flex;
-            align-items: center;
-            pointer-events: none;
-            z-index: 40;
-            opacity: 0.5;
-            transition: top 0.3s ease; /* Smooth move for eye contact mode */
+            position: fixed; top: 40%; left: 0; right: 0;
+            display: flex; align-items: center;
+            pointer-events: none; z-index: 40; opacity: 0.55;
+            transition: top 0.3s ease;
         }
-        
-        /* Eye Contact Mode Override */
-        .reading-guide.eye-contact-active {
-            top: 15% !important;
-        }
+        .reading-guide.eye-contact-active { top: 15% !important; }
 
-        /* Style 1: Arrows (Original) */
-        .guide-arrows {
-            height: 2px;
-        }
+        .guide-arrows { height: 2px; }
         .guide-arrows::before, .guide-arrows::after {
-            content: '';
-            flex: 1;
-            border-bottom: 2px dashed #ef4444;
+            content: ''; flex: 1; border-bottom: 2px dashed #ef4444;
         }
         .guide-arrows .guide-arrow {
-            display: block;
-            width: 0; 
-            height: 0; 
+            display: block; width: 0; height: 0;
             border-top: 10px solid transparent;
             border-bottom: 10px solid transparent;
             border-left: 15px solid #ef4444;
@@ -120,601 +80,696 @@
         .guide-arrows .arrow-left { margin-left: 10px; }
         .guide-arrows .arrow-right { margin-right: 10px; transform: rotate(180deg); }
 
-        /* Style 2: Focus Box */
         .guide-box {
-            height: 12vh; /* Relative height */
-            background: rgba(255, 255, 255, 0.1);
-            border-top: 1px solid rgba(255, 255, 255, 0.2);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            height: 12vh;
+            background: rgba(255,255,255,0.08);
+            border-top: 1px solid rgba(255,255,255,0.2);
+            border-bottom: 1px solid rgba(255,255,255,0.2);
             transform: translateY(-50%);
-            backdrop-filter: brightness(1.2); /* Slight highlight effect */
+            backdrop-filter: brightness(1.2);
         }
-        .guide-box::before, .guide-box::after, .guide-box .guide-arrow {
-            display: none;
-        }
+        .guide-box::before, .guide-box::after, .guide-box .guide-arrow { display: none; }
 
-        /* Style 3: Clean Line */
-        .guide-line {
-            height: 2px;
-            background: #3b82f6; /* Blue solid line */
-            box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
-        }
-        .guide-line::before, .guide-line::after, .guide-line .guide-arrow {
-            display: none;
-        }
+        .guide-line { height: 2px; background: #3b82f6; box-shadow: 0 0 10px rgba(59,130,246,0.6); }
+        .guide-line::before, .guide-line::after, .guide-line .guide-arrow { display: none; }
 
-        /* Scrolling Container Padding adjustments */
+        /* Scroll container — padding creates space above/below text relative to guide */
         #scrolling-container {
             padding-top: 40vh;
             padding-bottom: 40vh;
             transition: padding-top 0.3s ease;
         }
-        #scrolling-container.eye-contact-active {
-            padding-top: 15vh; /* Match the guide position roughly */
+        #scrolling-container.eye-contact-active { padding-top: 15vh; }
+
+        /* Collapsible settings panel */
+        #settings-panel {
+            overflow: hidden;
+            transition: max-height 0.3s ease, opacity 0.25s ease;
+            max-height: 400px;
+            opacity: 1;
+        }
+        #settings-panel.collapsed { max-height: 0; opacity: 0; }
+
+        /* Tap hint fade */
+        #tap-hint { transition: opacity 0.6s ease; }
+        #tap-hint.fade-out { opacity: 0; pointer-events: none; }
+
+        /* Btn label helper */
+        .btn-label {
+            display: none;
+            font-size: 0.6rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-top: 2px;
+            color: #6b7280;
+        }
+        @media (min-width: 640px) {
+            .btn-label { display: block; }
         }
     </style>
 </head>
-<body class="bg-gray-900 text-gray-100 font-sans h-screen overflow-hidden">
+<body class="bg-gray-900 text-gray-100 font-sans" style="height: 100dvh; overflow: hidden;">
 
-    <!-- APP CONTAINER -->
-    <div id="app" class="h-full w-full relative">
+<div id="app" class="h-full w-full relative">
 
-        <!-- VIEW: INPUT / EDITOR -->
-        <div id="input-view" class="flex flex-col h-full max-w-4xl mx-auto p-6 transition-opacity duration-300">
-            <header class="flex justify-between items-center mb-6">
-                <div class="flex items-center gap-2">
-                    <i data-lucide="monitor-play" class="text-blue-500 w-8 h-8"></i>
-                    <h1 class="text-2xl font-bold tracking-tight text-white">SwiftPrompter</h1>
-                </div>
-            </header>
+    <!-- ═══════════════════════════════════════════
+         VIEW: INPUT / EDITOR
+    ═══════════════════════════════════════════ -->
+    <div id="input-view" class="flex flex-col h-full max-w-4xl mx-auto px-4 py-4 sm:px-6 sm:py-6">
 
-            <main class="flex-1 flex flex-col gap-4">
-                <label for="script-input" class="sr-only">Enter your script here</label>
-                <textarea 
-                    id="script-input" 
-                    class="w-full flex-1 bg-gray-800 border border-gray-700 rounded-lg p-4 text-lg text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none placeholder-gray-500 shadow-inner"
-                    placeholder="Paste or type your script here..."></textarea>
-                
-                <div class="flex justify-end gap-3">
-                    <button onclick="clearText()" class="px-4 py-2 text-gray-400 hover:text-white transition-colors">
-                        Clear
-                    </button>
-                    <button onclick="startPrompter()" class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold shadow-lg transition-transform active:scale-95">
-                        <i data-lucide="play"></i> Start Teleprompter
-                    </button>
-                </div>
-            </main>
-            
-            <footer class="mt-6 text-center text-xs text-gray-600">
-                <p>Created by Jay &copy; 2025</p>
-            </footer>
+        <header class="flex items-center gap-2 mb-4 sm:mb-5 shrink-0">
+            <i data-lucide="monitor-play" class="text-blue-500 w-7 h-7 sm:w-8 sm:h-8 shrink-0"></i>
+            <h1 class="text-xl sm:text-2xl font-bold tracking-tight">SwiftPrompter</h1>
+        </header>
+
+        <main class="flex-1 flex flex-col gap-3 sm:gap-4 min-h-0">
+            <label for="script-input" class="sr-only">Enter your script here</label>
+            <textarea
+                id="script-input"
+                class="flex-1 min-h-0 w-full bg-gray-800 border border-gray-700 rounded-xl p-4 text-base sm:text-lg text-gray-200 placeholder-gray-500 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none shadow-inner"
+                placeholder="Paste or type your script here…"></textarea>
+
+            <div class="flex justify-between items-center shrink-0">
+                <button onclick="clearText()" class="px-4 py-2 text-sm sm:text-base text-gray-500 hover:text-white transition-colors rounded-lg hover:bg-gray-800">
+                    Clear
+                </button>
+                <button onclick="startPrompter()" class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white px-6 py-3 rounded-xl font-semibold shadow-lg transition-transform text-sm sm:text-base">
+                    <i data-lucide="play" class="w-4 h-4"></i> Start Teleprompter
+                </button>
+            </div>
+        </main>
+
+        <footer class="mt-3 text-center text-xs text-gray-600 shrink-0">
+            Created by Jay &copy; 2025
+        </footer>
+    </div>
+
+
+    <!-- ═══════════════════════════════════════════
+         VIEW: PROMPTER
+    ═══════════════════════════════════════════ -->
+    <div id="prompter-view" class="hidden absolute inset-0 z-50 flex flex-col" style="background-color:#000;">
+
+        <!-- Countdown -->
+        <div id="countdown-overlay" class="hidden absolute inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-sm pointer-events-none">
+            <span id="countdown-text" class="text-[8rem] sm:text-[10rem] font-bold text-white animate-pulse">3</span>
         </div>
 
-        <!-- VIEW: PROMPTER -->
-        <!-- Removed bg-black to allow dynamic color -->
-        <div id="prompter-view" class="hidden absolute inset-0 z-50 flex flex-col" style="background-color: #000000;">
-            
-            <!-- Countdown Overlay -->
-            <div id="countdown-overlay" class="hidden absolute inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm pointer-events-none">
-                <span id="countdown-text" class="text-[10rem] font-bold text-white animate-pulse">3</span>
-            </div>
+        <!-- Reading guide -->
+        <div id="reading-guide" class="reading-guide guide-arrows">
+            <div class="guide-arrow arrow-left absolute left-2"></div>
+            <div class="guide-arrow arrow-right absolute right-2"></div>
+        </div>
 
-            <!-- Reading Guide Overlay -->
-            <div id="reading-guide" class="reading-guide guide-arrows">
-                <div class="guide-arrow arrow-left absolute left-2"></div>
-                <div class="guide-arrow arrow-right absolute right-2"></div>
-            </div>
+        <!-- Tap-to-play hint — shown briefly on first open -->
+        <div id="tap-hint" class="absolute top-4 inset-x-0 flex justify-center z-[45] pointer-events-none">
+            <span class="bg-black/60 text-white/60 text-xs px-4 py-1.5 rounded-full">
+                Tap to play / pause
+            </span>
+        </div>
 
-            <!-- Scrolling Content Area -->
-            <!-- z-10 ensures it sits above video but below controls -->
-            <div id="scrolling-container" class="flex-1 overflow-y-scroll no-scrollbar relative px-8 z-10">
-                <!-- Removed text-white to allow dynamic color -->
-                <div id="prompter-text" class="max-w-5xl mx-auto font-medium text-center pb-96 select-none" style="color: #ffffff;">
-                    <!-- Text injected here -->
-                </div>
-            </div>
+        <!-- Scrolling text area — clicking/tapping here toggles play -->
+        <div id="scrolling-container" class="flex-1 overflow-y-scroll no-scrollbar relative px-5 sm:px-12 z-10 cursor-pointer">
+            <div id="prompter-text" class="max-w-5xl mx-auto font-medium text-center pb-[40vh] select-none" style="color:#fff;"></div>
+        </div>
 
-            <!-- RESTORE UI FLOATING BUTTON (Hidden by default) -->
-            <button id="restore-ui-btn" onclick="toggleControlsVisibility()" class="hidden absolute bottom-6 right-6 z-[60] p-4 rounded-full bg-blue-600/80 hover:bg-blue-500 backdrop-blur text-white shadow-lg transition-all hover:scale-105" title="Show Controls">
-                <i data-lucide="eye"></i>
+        <!-- Restore controls button (shown when controls are hidden) -->
+        <button id="restore-ui-btn" onclick="toggleControlsVisibility()" title="Show Controls"
+            class="hidden absolute bottom-6 right-6 z-[60] p-4 rounded-full bg-blue-600/80 hover:bg-blue-500 backdrop-blur-sm text-white shadow-xl transition-all active:scale-95">
+            <i data-lucide="eye"></i>
+        </button>
+
+        <!-- ─── Controls Toolbar ─── -->
+        <div id="controls" class="absolute bottom-0 inset-x-0 bg-gray-950/95 backdrop-blur-md border-t border-gray-800/80 transition-transform duration-300 z-50">
+
+            <!-- Mobile only: chevron to collapse/expand settings -->
+            <button id="settings-toggle" onclick="toggleSettingsPanel()" aria-label="Toggle settings"
+                class="sm:hidden w-full flex items-center justify-center py-2 text-gray-600 active:text-gray-300 transition-colors">
+                <i id="settings-chevron" data-lucide="chevron-up" class="w-5 h-5"></i>
             </button>
 
-            <!-- Floating Controls Toolbar -->
-            <div id="controls" class="absolute bottom-0 left-0 right-0 bg-gray-900/90 backdrop-blur-sm border-t border-gray-800 p-4 transition-transform duration-300 transform translate-y-0 z-50">
-                
-                <!-- Top Row: Sliders & Colors -->
-                <div class="flex flex-wrap justify-center items-end gap-6 mb-4 px-4 max-w-6xl mx-auto">
-                    
-                    <!-- Speed Control -->
-                    <div class="flex flex-col w-full sm:w-28 gap-1">
-                        <div class="flex justify-between text-xs text-gray-400 uppercase font-bold tracking-wider">
-                            <span>Speed</span>
-                            <span id="speed-val">3</span>
-                        </div>
-                        <input type="range" id="speed-range" min="0" max="10" step="1" value="3" class="w-full">
-                    </div>
+            <!-- Settings panel
+                 Mobile: full-width stacked sliders, then compact row for extras
+                 Desktop: single flex row, all inline                          -->
+            <div id="settings-panel" class="px-4 pb-3 sm:py-4 sm:px-6">
 
-                    <!-- Font Size Control -->
-                    <div class="flex flex-col w-full sm:w-28 gap-1">
-                        <div class="flex justify-between text-xs text-gray-400 uppercase font-bold tracking-wider">
-                            <span>Size</span>
-                            <span id="size-val">60px</span>
-                        </div>
-                        <input type="range" id="size-range" min="20" max="150" step="5" value="60" class="w-full">
+                <!-- Mobile layout -->
+                <div class="flex flex-col gap-3 sm:hidden">
+                    <!-- Speed slider -->
+                    <div class="flex items-center gap-3">
+                        <span class="text-xs text-gray-500 uppercase font-bold tracking-wider w-10 shrink-0">Speed</span>
+                        <input type="range" id="speed-range-mobile" min="0" max="10" step="1" value="3" class="flex-1">
+                        <span id="speed-val-mobile" class="text-xs text-gray-400 w-4 text-right shrink-0">3</span>
                     </div>
-
-                    <!-- Theme Control -->
-                    <div class="flex flex-col items-center gap-1">
-                        <div class="text-xs text-gray-400 uppercase font-bold tracking-wider">
-                            <span>Theme</span>
+                    <!-- Size slider -->
+                    <div class="flex items-center gap-3">
+                        <span class="text-xs text-gray-500 uppercase font-bold tracking-wider w-10 shrink-0">Size</span>
+                        <input type="range" id="size-range-mobile" min="20" max="120" step="5" value="40" class="flex-1">
+                        <span id="size-val-mobile" class="text-xs text-gray-400 w-10 text-right shrink-0">40px</span>
+                    </div>
+                    <!-- Extras row -->
+                    <div class="flex items-center justify-between gap-3">
+                        <!-- Colors -->
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-xs text-gray-500 uppercase font-bold tracking-wider">Theme</span>
+                            <input type="color" id="bg-color-mobile" value="#000000" title="Background">
+                            <input type="color" id="text-color-mobile" value="#ffffff" title="Text">
                         </div>
+                        <!-- Guide -->
+                        <select id="guide-select-mobile" class="bg-gray-800 text-gray-300 text-xs rounded-lg border border-gray-700 px-2 py-1.5 outline-none focus:border-blue-500">
+                            <option value="guide-arrows">Arrows</option>
+                            <option value="guide-box">Box</option>
+                            <option value="guide-line">Line</option>
+                        </select>
+                        <!-- Toggles -->
                         <div class="flex gap-2">
-                            <div class="flex flex-col items-center" title="Background Color">
-                                <input type="color" id="bg-color-picker" value="#000000">
-                            </div>
-                            <div class="flex flex-col items-center" title="Text Color">
-                                <input type="color" id="text-color-picker" value="#ffffff">
-                            </div>
+                            <button id="eye-contact-mobile" onclick="toggleEyeContact()" title="Eye Contact Mode"
+                                class="p-1.5 rounded-lg bg-gray-800 text-gray-400 hover:text-white border border-gray-700">
+                                <i data-lucide="align-vertical-space-around" class="w-4 h-4"></i>
+                            </button>
+                            <button id="countdown-mobile" onclick="toggleCountdownSetting()" title="Countdown"
+                                class="p-1.5 rounded-lg bg-gray-800 text-gray-400 hover:text-white border border-gray-700">
+                                <i data-lucide="timer" class="w-4 h-4"></i>
+                            </button>
                         </div>
                     </div>
+                </div>
 
-                    <!-- Guide Style Control -->
-                    <div class="flex flex-col items-start gap-1 w-full sm:w-auto">
-                        <div class="text-xs text-gray-400 uppercase font-bold tracking-wider">
-                            <span>Guide</span>
+                <!-- Desktop layout (hidden on mobile) -->
+                <div class="hidden sm:flex items-end justify-center gap-6 flex-wrap max-w-5xl mx-auto">
+                    <!-- Speed -->
+                    <div class="flex flex-col gap-1 w-32">
+                        <div class="flex justify-between text-xs text-gray-500 uppercase font-bold tracking-wider">
+                            <span>Speed</span><span id="speed-val-desktop">3</span>
                         </div>
-                        <select id="guide-select" class="bg-gray-800 text-gray-200 text-sm rounded border border-gray-700 px-2 py-1 focus:outline-none focus:border-blue-500 w-full sm:w-24">
+                        <input type="range" id="speed-range-desktop" min="0" max="10" step="1" value="3">
+                    </div>
+                    <!-- Size -->
+                    <div class="flex flex-col gap-1 w-32">
+                        <div class="flex justify-between text-xs text-gray-500 uppercase font-bold tracking-wider">
+                            <span>Size</span><span id="size-val-desktop">60px</span>
+                        </div>
+                        <input type="range" id="size-range-desktop" min="20" max="150" step="5" value="60">
+                    </div>
+                    <!-- Colors -->
+                    <div class="flex flex-col items-center gap-1.5">
+                        <span class="text-xs text-gray-500 uppercase font-bold tracking-wider">Theme</span>
+                        <div class="flex gap-2">
+                            <input type="color" id="bg-color-desktop" value="#000000" title="Background color">
+                            <input type="color" id="text-color-desktop" value="#ffffff" title="Text color">
+                        </div>
+                    </div>
+                    <!-- Guide -->
+                    <div class="flex flex-col gap-1.5">
+                        <span class="text-xs text-gray-500 uppercase font-bold tracking-wider">Guide</span>
+                        <select id="guide-select-desktop" class="bg-gray-800 text-gray-300 text-sm rounded-lg border border-gray-700 px-2 py-1.5 outline-none focus:border-blue-500 w-24">
                             <option value="guide-arrows">Arrows</option>
                             <option value="guide-box">Box</option>
                             <option value="guide-line">Line</option>
                         </select>
                     </div>
-
-                    <!-- Extra Features Toggles -->
-                    <div class="flex flex-col items-start gap-1">
-                        <div class="text-xs text-gray-400 uppercase font-bold tracking-wider">
-                            <span>Opts</span>
-                        </div>
+                    <!-- Toggles -->
+                    <div class="flex flex-col gap-1.5">
+                        <span class="text-xs text-gray-500 uppercase font-bold tracking-wider">Options</span>
                         <div class="flex gap-2">
-                            <button id="toggle-eye-contact" onclick="toggleEyeContact()" class="p-1.5 rounded bg-gray-800 text-gray-400 hover:text-white border border-gray-700 text-xs" title="Eye Contact Mode (Top Align)">
+                            <button id="eye-contact-desktop" onclick="toggleEyeContact()" title="Eye Contact Mode"
+                                class="p-1.5 rounded-lg bg-gray-800 text-gray-400 hover:text-white border border-gray-700 transition-colors">
                                 <i data-lucide="align-vertical-space-around" class="w-4 h-4"></i>
                             </button>
-                            <button id="toggle-countdown" onclick="toggleCountdownSetting()" class="p-1.5 rounded bg-gray-800 text-gray-400 hover:text-white border border-gray-700 text-xs" title="Enable Countdown">
+                            <button id="countdown-desktop" onclick="toggleCountdownSetting()" title="Enable Countdown"
+                                class="p-1.5 rounded-lg bg-gray-800 text-gray-400 hover:text-white border border-gray-700 transition-colors">
                                 <i data-lucide="timer" class="w-4 h-4"></i>
                             </button>
                         </div>
                     </div>
-
-                </div>
-
-                <!-- Bottom Row: Buttons -->
-                <div class="flex justify-center items-center gap-4">
-                    
-                    <button onclick="exitPrompter()" class="p-3 rounded-full hover:bg-gray-800 text-gray-400 hover:text-red-400 transition-colors" title="Back to Edit">
-                        <i data-lucide="arrow-left"></i>
-                    </button>
-
-                    <button onclick="resetScroll()" class="p-3 rounded-full hover:bg-gray-800 text-gray-400 hover:text-white transition-colors" title="Reset to Top">
-                        <i data-lucide="rotate-ccw"></i>
-                    </button>
-                    
-                    <button id="play-btn" onclick="togglePlay()" class="p-4 rounded-full bg-blue-600 hover:bg-blue-500 text-white shadow-lg transition-transform active:scale-95 mx-2">
-                        <i data-lucide="play" class="fill-current"></i>
-                    </button>
-
-                    <button onclick="toggleMirror()" id="mirror-btn" class="p-3 rounded-full hover:bg-gray-800 text-gray-400 hover:text-white transition-colors" title="Mirror Text">
-                        <i data-lucide="flip-horizontal"></i>
-                    </button>
-
-                    <!-- Hide UI Toggle -->
-                    <button onclick="toggleControlsVisibility()" class="p-3 rounded-full hover:bg-gray-800 text-gray-400 hover:text-white transition-colors" title="Hide Controls">
-                        <i data-lucide="eye-off"></i>
-                    </button>
                 </div>
             </div>
-        </div>
 
+            <!-- Action buttons row -->
+            <div class="flex justify-center items-end gap-3 sm:gap-5 px-4 pb-4 pt-1 sm:pt-0">
+                <div class="flex flex-col items-center">
+                    <button onclick="exitPrompter()" title="Back to Edit"
+                        class="p-3 rounded-full hover:bg-gray-800 text-gray-500 hover:text-red-400 transition-colors">
+                        <i data-lucide="arrow-left"></i>
+                    </button>
+                    <span class="btn-label">Exit</span>
+                </div>
+                <div class="flex flex-col items-center">
+                    <button onclick="resetScroll()" title="Reset to Top"
+                        class="p-3 rounded-full hover:bg-gray-800 text-gray-500 hover:text-white transition-colors">
+                        <i data-lucide="rotate-ccw"></i>
+                    </button>
+                    <span class="btn-label">Reset</span>
+                </div>
+
+                <div class="flex flex-col items-center">
+                    <button id="play-btn" onclick="togglePlay()"
+                        class="p-4 rounded-full bg-blue-600 hover:bg-blue-500 active:scale-95 text-white shadow-lg shadow-blue-900/40 transition-all mx-1">
+                        <i data-lucide="play" class="fill-current w-5 h-5"></i>
+                    </button>
+                    <span class="btn-label">Play</span>
+                </div>
+
+                <div class="flex flex-col items-center">
+                    <button onclick="toggleMirror()" id="mirror-btn" title="Mirror"
+                        class="p-3 rounded-full hover:bg-gray-800 text-gray-500 hover:text-white transition-colors">
+                        <i data-lucide="flip-horizontal"></i>
+                    </button>
+                    <span class="btn-label">Mirror</span>
+                </div>
+                <div class="flex flex-col items-center">
+                    <button onclick="toggleControlsVisibility()" title="Hide Controls"
+                        class="p-3 rounded-full hover:bg-gray-800 text-gray-500 hover:text-white transition-colors">
+                        <i data-lucide="eye-off"></i>
+                    </button>
+                    <span class="btn-label">Hide</span>
+                </div>
+            </div>
+
+            <!-- Desktop keyboard shortcut hint -->
+            <div class="hidden sm:flex justify-center pb-3 gap-4 text-gray-600 text-xs">
+                <span><kbd class="bg-gray-800 px-1.5 py-0.5 rounded text-gray-500">Space</kbd> Play/Pause</span>
+                <span><kbd class="bg-gray-800 px-1.5 py-0.5 rounded text-gray-500">↑ ↓</kbd> Speed</span>
+                <span><kbd class="bg-gray-800 px-1.5 py-0.5 rounded text-gray-500">Esc</kbd> Exit</span>
+            </div>
+        </div>
     </div>
 
-    <script>
-        // --- State Management ---
-        const state = {
-            isPlaying: false,
-            isCountingDown: false,
-            speed: 3, // pixels per frame (approx)
-            fontSize: 60,
-            isMirrored: false,
-            animationId: null,
-            lastFrameTime: 0,
-            bgColor: '#000000',
-            textColor: '#ffffff',
-            guideStyle: 'guide-arrows',
-            eyeContactMode: false,
-            enableCountdown: false,
-            wakeLock: null,
-            uiHidden: false
-        };
+</div><!-- #app -->
 
-        // --- DOM Elements ---
-        const els = {
-            inputView: document.getElementById('input-view'),
-            prompterView: document.getElementById('prompter-view'),
-            input: document.getElementById('script-input'),
-            display: document.getElementById('prompter-text'),
-            container: document.getElementById('scrolling-container'),
-            playBtn: document.getElementById('play-btn'),
-            speedRange: document.getElementById('speed-range'),
-            sizeRange: document.getElementById('size-range'),
-            speedVal: document.getElementById('speed-val'),
-            sizeVal: document.getElementById('size-val'),
-            mirrorBtn: document.getElementById('mirror-btn'),
-            bgPicker: document.getElementById('bg-color-picker'),
-            textPicker: document.getElementById('text-color-picker'),
-            guideSelect: document.getElementById('guide-select'),
-            readingGuide: document.getElementById('reading-guide'),
-            eyeContactBtn: document.getElementById('toggle-eye-contact'),
-            countdownBtn: document.getElementById('toggle-countdown'),
-            countdownOverlay: document.getElementById('countdown-overlay'),
-            countdownText: document.getElementById('countdown-text'),
-            controls: document.getElementById('controls'),
-            restoreUiBtn: document.getElementById('restore-ui-btn')
-        };
+<script>
+    // ─── Defaults ────────────────────────────────────────────────────────────
+    const isMobile = window.innerWidth < 640;
+    const DEFAULTS = {
+        speed: 3,
+        fontSize: isMobile ? 40 : 60,
+        bgColor: '#000000',
+        textColor: '#ffffff',
+        guideStyle: 'guide-arrows'
+    };
 
-        // --- Initialization ---
+    // ─── State ────────────────────────────────────────────────────────────────
+    const state = {
+        isPlaying: false,
+        isCountingDown: false,
+        isMirrored: false,
+        eyeContactMode: false,
+        enableCountdown: false,
+        uiHidden: false,
+        settingsExpanded: !isMobile,
+        animationId: null,
+        lastFrameTime: 0,
+        wakeLock: null,
+        ...DEFAULTS
+    };
+
+    // ─── DOM ──────────────────────────────────────────────────────────────────
+    const els = {
+        inputView:       document.getElementById('input-view'),
+        prompterView:    document.getElementById('prompter-view'),
+        input:           document.getElementById('script-input'),
+        display:         document.getElementById('prompter-text'),
+        container:       document.getElementById('scrolling-container'),
+        playBtn:         document.getElementById('play-btn'),
+        controls:        document.getElementById('controls'),
+        restoreUiBtn:    document.getElementById('restore-ui-btn'),
+        settingsPanel:   document.getElementById('settings-panel'),
+        settingsChevron: document.getElementById('settings-chevron'),
+        readingGuide:    document.getElementById('reading-guide'),
+        tapHint:         document.getElementById('tap-hint'),
+        countdownOverlay:document.getElementById('countdown-overlay'),
+        countdownText:   document.getElementById('countdown-text'),
+        mirrorBtn:       document.getElementById('mirror-btn'),
+        // Mobile controls
+        speedRangeM:  document.getElementById('speed-range-mobile'),
+        sizeRangeM:   document.getElementById('size-range-mobile'),
+        speedValM:    document.getElementById('speed-val-mobile'),
+        sizeValM:     document.getElementById('size-val-mobile'),
+        bgPickerM:    document.getElementById('bg-color-mobile'),
+        textPickerM:  document.getElementById('text-color-mobile'),
+        guideSelectM: document.getElementById('guide-select-mobile'),
+        eyeContactM:  document.getElementById('eye-contact-mobile'),
+        countdownM:   document.getElementById('countdown-mobile'),
+        // Desktop controls
+        speedRangeD:  document.getElementById('speed-range-desktop'),
+        sizeRangeD:   document.getElementById('size-range-desktop'),
+        speedValD:    document.getElementById('speed-val-desktop'),
+        sizeValD:     document.getElementById('size-val-desktop'),
+        bgPickerD:    document.getElementById('bg-color-desktop'),
+        textPickerD:  document.getElementById('text-color-desktop'),
+        guideSelectD: document.getElementById('guide-select-desktop'),
+        eyeContactD:  document.getElementById('eye-contact-desktop'),
+        countdownD:   document.getElementById('countdown-desktop'),
+    };
+
+    // ─── Init ─────────────────────────────────────────────────────────────────
+    lucide.createIcons();
+    loadSettings();
+
+    const savedScript = localStorage.getItem('swiftPrompter_script');
+    if (savedScript) els.input.value = savedScript;
+
+    if (!state.settingsExpanded) els.settingsPanel.classList.add('collapsed');
+
+    // ─── Settings persistence ─────────────────────────────────────────────────
+    function loadSettings() {
+        try {
+            const saved = JSON.parse(localStorage.getItem('swiftPrompter_settings') || '{}');
+            state.speed      = saved.speed      ?? DEFAULTS.speed;
+            state.fontSize   = saved.fontSize   ?? DEFAULTS.fontSize;
+            state.bgColor    = saved.bgColor    ?? DEFAULTS.bgColor;
+            state.textColor  = saved.textColor  ?? DEFAULTS.textColor;
+            state.guideStyle = saved.guideStyle ?? DEFAULTS.guideStyle;
+        } catch (_) { /* use defaults */ }
+        syncControlsToState();
+    }
+
+    function saveSettings() {
+        localStorage.setItem('swiftPrompter_settings', JSON.stringify({
+            speed: state.speed, fontSize: state.fontSize,
+            bgColor: state.bgColor, textColor: state.textColor,
+            guideStyle: state.guideStyle
+        }));
+    }
+
+    // Push state values into both sets of controls
+    function syncControlsToState() {
+        // Mobile
+        els.speedRangeM.value  = state.speed;
+        els.speedValM.innerText = state.speed;
+        els.sizeRangeM.value   = state.fontSize;
+        els.sizeValM.innerText = state.fontSize + 'px';
+        els.bgPickerM.value    = state.bgColor;
+        els.textPickerM.value  = state.textColor;
+        els.guideSelectM.value = state.guideStyle;
+        // Desktop
+        els.speedRangeD.value  = state.speed;
+        els.speedValD.innerText = state.speed;
+        els.sizeRangeD.value   = state.fontSize;
+        els.sizeValD.innerText = state.fontSize + 'px';
+        els.bgPickerD.value    = state.bgColor;
+        els.textPickerD.value  = state.textColor;
+        els.guideSelectD.value = state.guideStyle;
+    }
+
+    // ─── Security ─────────────────────────────────────────────────────────────
+    function escapeHtml(str) {
+        return str
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    // ─── Core ─────────────────────────────────────────────────────────────────
+    async function startPrompter(pushHistory = true) {
+        const text = els.input.value;
+        if (!text.trim()) { alert('Please enter some text first.'); return; }
+
+        localStorage.setItem('swiftPrompter_script', text);
+        els.display.innerHTML = escapeHtml(text).replace(/\n/g, '<br>');
+
+        els.inputView.classList.add('hidden');
+        els.prompterView.classList.remove('hidden');
+
+        updateFontSize(state.fontSize);
+        updateColors(state.bgColor, state.textColor);
+        updateGuideStyle(state.guideStyle);
+
+        if (state.uiHidden) toggleControlsVisibility();
+
+        if (pushHistory) {
+            const url = new URL(window.location);
+            url.searchParams.set('mode', 'prompter');
+            history.pushState({ view: 'prompter' }, '', url);
+        }
+
         lucide.createIcons();
+        els.container.scrollTop = 0;
+        state.isPlaying = false;
+        updatePlayButton();
 
-        // Restore script from local storage if available
-        const savedScript = localStorage.getItem('swiftPrompter_script');
-        if (savedScript) els.input.value = savedScript;
+        // Tap hint — show briefly on mobile, hide on desktop
+        if (isMobile) {
+            els.tapHint.style.opacity = '1';
+            setTimeout(() => {
+                els.tapHint.classList.add('fade-out');
+            }, 2500);
+        } else {
+            els.tapHint.style.display = 'none';
+        }
 
-        // Handle URL params on load (Deep linking capability)
-        window.addEventListener('load', () => {
-            const params = new URLSearchParams(window.location.search);
-            if (params.get('mode') === 'prompter' && els.input.value.trim() !== "") {
-                startPrompter(false); // Don't push state, just render
-            }
-        });
+        await requestWakeLock();
+    }
 
-        // Handle Browser Back Button
-        window.addEventListener('popstate', (event) => {
-            if (!event.state || event.state.view === 'input') {
-                showInputView();
-            } else if (event.state.view === 'prompter') {
-                startPrompter(false);
-            }
-        });
+    async function exitPrompter() {
+        stopScroll();
+        releaseWakeLock();
+        els.prompterView.classList.add('hidden');
+        els.inputView.classList.remove('hidden');
+        const url = new URL(window.location);
+        url.searchParams.delete('mode');
+        history.pushState({ view: 'input' }, '', url);
+    }
 
-        // --- Core Functions ---
+    function showInputView() {
+        stopScroll();
+        releaseWakeLock();
+        els.prompterView.classList.add('hidden');
+        els.inputView.classList.remove('hidden');
+    }
 
-        async function startPrompter(pushHistory = true) {
-            const text = els.input.value;
-            if (!text.trim()) {
-                alert("Please enter some text first.");
-                return;
-            }
+    function clearText() {
+        if (confirm('Clear the script?')) {
+            els.input.value = '';
+            localStorage.removeItem('swiftPrompter_script');
+        }
+    }
 
-            // Save script
-            localStorage.setItem('swiftPrompter_script', text);
+    // ─── URL / history ────────────────────────────────────────────────────────
+    window.addEventListener('load', () => {
+        const p = new URLSearchParams(location.search);
+        if (p.get('mode') === 'prompter' && els.input.value.trim()) startPrompter(false);
+    });
+    window.addEventListener('popstate', (e) => {
+        if (!e.state || e.state.view === 'input') showInputView();
+        else if (e.state.view === 'prompter') startPrompter(false);
+    });
 
-            // Format text: preserve newlines
-            els.display.innerHTML = text.replace(/\n/g, '<br>');
+    // ─── Tap / click to play (unified pointer approach) ───────────────────────
+    let pointerDownX = 0, pointerDownY = 0;
 
-            // Switch Views
-            els.inputView.classList.add('hidden');
-            els.prompterView.classList.remove('hidden');
+    els.container.addEventListener('pointerdown', (e) => {
+        pointerDownX = e.clientX;
+        pointerDownY = e.clientY;
+    });
 
-            // Apply settings
-            updateFontSize(state.fontSize);
-            updateColors(state.bgColor, state.textColor);
-            updateGuideStyle(state.guideStyle);
-            
-            // Ensure UI is visible
-            if (state.uiHidden) toggleControlsVisibility();
+    els.container.addEventListener('pointerup', (e) => {
+        const moved = Math.hypot(e.clientX - pointerDownX, e.clientY - pointerDownY);
+        if (moved < 12) togglePlay(); // tap, not a drag
+    });
 
-            // History Management
-            if (pushHistory) {
-                const url = new URL(window.location);
-                url.searchParams.set('mode', 'prompter');
-                window.history.pushState({ view: 'prompter' }, '', url);
-            }
+    // ─── Settings collapse (mobile) ───────────────────────────────────────────
+    function toggleSettingsPanel() {
+        state.settingsExpanded = !state.settingsExpanded;
+        els.settingsPanel.classList.toggle('collapsed', !state.settingsExpanded);
+        els.settingsChevron.setAttribute('data-lucide', state.settingsExpanded ? 'chevron-up' : 'chevron-down');
+        lucide.createIcons();
+    }
 
-            // Ensure icons render in new view
-            lucide.createIcons();
-            
-            // Reset position slightly to top
-            els.container.scrollTop = 0;
-            state.isPlaying = false;
-            updatePlayButton();
+    // ─── UI visibility ────────────────────────────────────────────────────────
+    function toggleControlsVisibility() {
+        state.uiHidden = !state.uiHidden;
+        els.controls.classList.toggle('translate-y-full', state.uiHidden);
+        els.restoreUiBtn.classList.toggle('hidden', !state.uiHidden);
+    }
 
-            // Request Wake Lock
+    // ─── Wake Lock ────────────────────────────────────────────────────────────
+    async function requestWakeLock() {
+        if ('wakeLock' in navigator) {
+            try { state.wakeLock = await navigator.wakeLock.request('screen'); }
+            catch (e) { console.warn('Wake lock:', e.message); }
+        }
+    }
+    function releaseWakeLock() {
+        if (state.wakeLock) state.wakeLock.release().then(() => { state.wakeLock = null; });
+    }
+    document.addEventListener('visibilitychange', async () => {
+        if (document.visibilityState === 'visible' && !els.prompterView.classList.contains('hidden')) {
             await requestWakeLock();
         }
+    });
 
-        async function exitPrompter() {
-            stopScroll();
-            // Release Wake Lock
-            releaseWakeLock();
+    // ─── Playback ─────────────────────────────────────────────────────────────
+    function togglePlay() {
+        if (state.isCountingDown) return;
+        if (state.isPlaying) { stopScroll(); }
+        else { state.enableCountdown ? runCountdown() : startScrollEngine(); }
+    }
 
-            els.prompterView.classList.add('hidden');
-            els.inputView.classList.remove('hidden');
-            
-            // History Management
-            const url = new URL(window.location);
-            url.searchParams.delete('mode');
-            window.history.pushState({ view: 'input' }, '', url);
+    async function runCountdown() {
+        state.isCountingDown = true;
+        els.playBtn.disabled = true;
+        els.playBtn.classList.add('opacity-50');
+        els.countdownOverlay.classList.remove('hidden');
+        for (let i = 3; i > 0; i--) {
+            els.countdownText.innerText = i;
+            await new Promise(r => setTimeout(r, 1000));
         }
+        els.countdownOverlay.classList.add('hidden');
+        state.isCountingDown = false;
+        els.playBtn.disabled = false;
+        els.playBtn.classList.remove('opacity-50');
+        startScrollEngine();
+    }
 
-        function showInputView() {
-            stopScroll();
-            releaseWakeLock();
-            els.prompterView.classList.add('hidden');
-            els.inputView.classList.remove('hidden');
-        }
+    function startScrollEngine() {
+        state.isPlaying = true;
+        updatePlayButton();
+        state.lastFrameTime = performance.now();
+        state.animationId = requestAnimationFrame(scrollLoop);
+    }
 
-        function clearText() {
-            if(confirm('Are you sure you want to clear the script?')) {
-                els.input.value = '';
-                localStorage.removeItem('swiftPrompter_script');
+    function stopScroll() {
+        state.isPlaying = false;
+        if (state.animationId) { cancelAnimationFrame(state.animationId); state.animationId = null; }
+        updatePlayButton();
+    }
+
+    function resetScroll() {
+        stopScroll();
+        els.container.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function scrollLoop(ts) {
+        if (!state.isPlaying) return;
+        const dt = ts - state.lastFrameTime;
+        if (dt >= 16) {
+            if (state.speed > 0) els.container.scrollTop += (state.speed * 0.5) * (dt / 16);
+            state.lastFrameTime = ts;
+            if (els.container.scrollTop + els.container.clientHeight >= els.container.scrollHeight) {
+                stopScroll(); return;
             }
         }
+        state.animationId = requestAnimationFrame(scrollLoop);
+    }
 
-        // --- UI Visibility Logic ---
-        function toggleControlsVisibility() {
-            state.uiHidden = !state.uiHidden;
+    function updatePlayButton() {
+        const playing = state.isPlaying;
+        els.playBtn.innerHTML = `<i data-lucide="${playing ? 'pause' : 'play'}" class="fill-current w-5 h-5"></i>`;
+        lucide.createIcons();
+        els.playBtn.classList.toggle('bg-blue-600', !playing);
+        els.playBtn.classList.toggle('hover:bg-blue-500', !playing);
+        els.playBtn.classList.toggle('shadow-blue-900/40', !playing);
+        els.playBtn.classList.toggle('bg-red-600', playing);
+        els.playBtn.classList.toggle('hover:bg-red-500', playing);
+        els.playBtn.classList.toggle('shadow-red-900/40', playing);
+    }
 
-            if (state.uiHidden) {
-                // Hide Controls (Slide Down)
-                els.controls.classList.add('translate-y-full');
-                // Show Restore Button
-                els.restoreUiBtn.classList.remove('hidden');
-            } else {
-                // Show Controls (Slide Up)
-                els.controls.classList.remove('translate-y-full');
-                // Hide Restore Button
-                els.restoreUiBtn.classList.add('hidden');
-            }
-        }
+    // ─── Settings controls (wired to both mobile + desktop sets) ─────────────
+    function onSpeedChange(val) {
+        state.speed = parseInt(val);
+        els.speedValM.innerText = state.speed;
+        els.speedValD.innerText = state.speed;
+        els.speedRangeM.value = state.speed;
+        els.speedRangeD.value = state.speed;
+        saveSettings();
+    }
+    function onSizeChange(val) {
+        state.fontSize = parseInt(val);
+        updateFontSize(state.fontSize);
+        els.sizeRangeM.value = state.fontSize;
+        els.sizeRangeD.value = state.fontSize;
+        saveSettings();
+    }
+    function onBgChange(val) {
+        state.bgColor = val;
+        updateColors(state.bgColor, state.textColor);
+        els.bgPickerM.value = val;
+        els.bgPickerD.value = val;
+        saveSettings();
+    }
+    function onTextColorChange(val) {
+        state.textColor = val;
+        updateColors(state.bgColor, state.textColor);
+        els.textPickerM.value = val;
+        els.textPickerD.value = val;
+        saveSettings();
+    }
+    function onGuideChange(val) {
+        state.guideStyle = val;
+        updateGuideStyle(val);
+        els.guideSelectM.value = val;
+        els.guideSelectD.value = val;
+        saveSettings();
+    }
 
-        // --- Wake Lock API ---
-        async function requestWakeLock() {
-            if ('wakeLock' in navigator) {
-                try {
-                    state.wakeLock = await navigator.wakeLock.request('screen');
-                    console.log('Wake Lock is active');
-                } catch (err) {
-                    console.error(`${err.name}, ${err.message}`);
-                }
-            }
-        }
+    // Wire up mobile controls
+    els.speedRangeM.addEventListener('input',  e => onSpeedChange(e.target.value));
+    els.sizeRangeM.addEventListener('input',   e => onSizeChange(e.target.value));
+    els.bgPickerM.addEventListener('input',    e => onBgChange(e.target.value));
+    els.textPickerM.addEventListener('input',  e => onTextColorChange(e.target.value));
+    els.guideSelectM.addEventListener('change',e => onGuideChange(e.target.value));
 
-        function releaseWakeLock() {
-            if (state.wakeLock !== null) {
-                state.wakeLock.release()
-                    .then(() => {
-                        state.wakeLock = null;
-                        console.log('Wake Lock released');
-                    });
-            }
-        }
+    // Wire up desktop controls
+    els.speedRangeD.addEventListener('input',  e => onSpeedChange(e.target.value));
+    els.sizeRangeD.addEventListener('input',   e => onSizeChange(e.target.value));
+    els.bgPickerD.addEventListener('input',    e => onBgChange(e.target.value));
+    els.textPickerD.addEventListener('input',  e => onTextColorChange(e.target.value));
+    els.guideSelectD.addEventListener('change',e => onGuideChange(e.target.value));
 
-        // Re-request wake lock if tab visibility changes
-        document.addEventListener('visibilitychange', async () => {
-            if (state.wakeLock !== null && document.visibilityState === 'visible') {
-                await requestWakeLock();
-            }
+    // ─── Toggle options ───────────────────────────────────────────────────────
+    function toggleEyeContact() {
+        state.eyeContactMode = !state.eyeContactMode;
+        els.readingGuide.classList.toggle('eye-contact-active', state.eyeContactMode);
+        els.container.classList.toggle('eye-contact-active', state.eyeContactMode);
+        [els.eyeContactM, els.eyeContactD].forEach(btn => {
+            btn.classList.toggle('text-blue-400', state.eyeContactMode);
+            btn.classList.toggle('bg-gray-700', state.eyeContactMode);
         });
+    }
 
-        // --- Scrolling Logic & Countdown ---
-
-        function togglePlay() {
-            if (state.isCountingDown) return; // Ignore clicks during countdown
-
-            if (state.isPlaying) {
-                // Stop
-                stopScroll();
-                state.isPlaying = false;
-                updatePlayButton();
-            } else {
-                // Start
-                if (state.enableCountdown) {
-                    runCountdown();
-                } else {
-                    startScrollEngine();
-                }
-            }
-        }
-
-        async function runCountdown() {
-            state.isCountingDown = true;
-            els.playBtn.disabled = true;
-            els.playBtn.classList.add('opacity-50');
-            
-            els.countdownOverlay.classList.remove('hidden');
-            
-            for (let i = 3; i > 0; i--) {
-                els.countdownText.innerText = i;
-                // Simple wait
-                await new Promise(resolve => setTimeout(resolve, 1000));
-            }
-            
-            els.countdownOverlay.classList.add('hidden');
-            state.isCountingDown = false;
-            els.playBtn.disabled = false;
-            els.playBtn.classList.remove('opacity-50');
-            
-            startScrollEngine();
-        }
-
-        function startScrollEngine() {
-            state.isPlaying = true;
-            updatePlayButton();
-            state.lastFrameTime = performance.now();
-            state.animationId = requestAnimationFrame(scrollLoop);
-        }
-
-        function stopScroll() {
-            state.isPlaying = false;
-            if (state.animationId) {
-                cancelAnimationFrame(state.animationId);
-                state.animationId = null;
-            }
-            updatePlayButton();
-        }
-
-        function resetScroll() {
-            stopScroll();
-            els.container.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-
-        function scrollLoop(timestamp) {
-            if (!state.isPlaying) return;
-
-            // Use timestamp to ensure consistent speed across refresh rates
-            const deltaTime = timestamp - state.lastFrameTime;
-            
-            // Speed factor: 0 = stop, 10 = fast. 
-            if (deltaTime >= 16) { 
-                const pixelsToScroll = (state.speed * 0.5) * (deltaTime / 16); 
-                
-                if (state.speed > 0) {
-                    els.container.scrollTop += pixelsToScroll;
-                }
-
-                state.lastFrameTime = timestamp;
-
-                // Stop if we hit bottom
-                if (els.container.scrollTop + els.container.clientHeight >= els.container.scrollHeight) {
-                    stopScroll();
-                    state.isPlaying = false; // Ensure state update
-                    updatePlayButton();
-                    return;
-                }
-            }
-
-            state.animationId = requestAnimationFrame(scrollLoop);
-        }
-
-        function updatePlayButton() {
-            const iconName = state.isPlaying ? 'pause' : 'play';
-            els.playBtn.innerHTML = `<i data-lucide="${iconName}" class="fill-current"></i>`;
-            lucide.createIcons();
-            
-            if(state.isPlaying) {
-                 els.playBtn.classList.remove('bg-blue-600', 'hover:bg-blue-500');
-                 els.playBtn.classList.add('bg-red-600', 'hover:bg-red-500');
-            } else {
-                 els.playBtn.classList.add('bg-blue-600', 'hover:bg-blue-500');
-                 els.playBtn.classList.remove('bg-red-600', 'hover:bg-red-500');
-            }
-        }
-
-        // --- Settings Logic ---
-
-        els.speedRange.addEventListener('input', (e) => {
-            state.speed = parseInt(e.target.value);
-            els.speedVal.innerText = state.speed;
+    function toggleCountdownSetting() {
+        state.enableCountdown = !state.enableCountdown;
+        [els.countdownM, els.countdownD].forEach(btn => {
+            btn.classList.toggle('text-blue-400', state.enableCountdown);
+            btn.classList.toggle('bg-gray-700', state.enableCountdown);
         });
+    }
 
-        els.sizeRange.addEventListener('input', (e) => {
-            state.fontSize = parseInt(e.target.value);
-            updateFontSize(state.fontSize);
-        });
+    function toggleMirror() {
+        state.isMirrored = !state.isMirrored;
+        els.display.classList.toggle('mirror-x', state.isMirrored);
+        els.mirrorBtn.classList.toggle('text-blue-400', state.isMirrored);
+        els.mirrorBtn.classList.toggle('bg-gray-800', state.isMirrored);
+    }
 
-        els.bgPicker.addEventListener('input', (e) => {
-            state.bgColor = e.target.value;
-            updateColors(state.bgColor, state.textColor);
-        });
+    // ─── Apply functions ──────────────────────────────────────────────────────
+    function updateFontSize(size) {
+        els.display.style.fontSize = size + 'px';
+        els.sizeValM.innerText = size + 'px';
+        els.sizeValD.innerText = size + 'px';
+    }
+    function updateColors(bg, text) {
+        els.prompterView.style.backgroundColor = bg;
+        els.display.style.color = text;
+    }
+    function updateGuideStyle(styleClass) {
+        const wasEyeContact = els.readingGuide.classList.contains('eye-contact-active');
+        els.readingGuide.className = 'reading-guide ' + styleClass;
+        if (wasEyeContact) els.readingGuide.classList.add('eye-contact-active');
+    }
 
-        els.textPicker.addEventListener('input', (e) => {
-            state.textColor = e.target.value;
-            updateColors(state.bgColor, state.textColor);
-        });
+    // ─── Keyboard shortcuts (desktop) ─────────────────────────────────────────
+    document.addEventListener('keydown', e => {
+        if (els.prompterView.classList.contains('hidden')) return;
+        if (e.code === 'Space')     { e.preventDefault(); togglePlay(); }
+        if (e.code === 'ArrowUp')   { e.preventDefault(); onSpeedChange(Math.min(state.speed + 1, 10)); }
+        if (e.code === 'ArrowDown') { e.preventDefault(); onSpeedChange(Math.max(state.speed - 1, 0)); }
+        if (e.code === 'Escape')    { exitPrompter(); }
+    });
 
-        els.guideSelect.addEventListener('change', (e) => {
-            state.guideStyle = e.target.value;
-            updateGuideStyle(state.guideStyle);
-        });
-
-        function toggleEyeContact() {
-            state.eyeContactMode = !state.eyeContactMode;
-            if (state.eyeContactMode) {
-                els.readingGuide.classList.add('eye-contact-active');
-                els.container.classList.add('eye-contact-active');
-                els.eyeContactBtn.classList.add('text-blue-500', 'bg-gray-700');
-            } else {
-                els.readingGuide.classList.remove('eye-contact-active');
-                els.container.classList.remove('eye-contact-active');
-                els.eyeContactBtn.classList.remove('text-blue-500', 'bg-gray-700');
-            }
-        }
-
-        function toggleCountdownSetting() {
-            state.enableCountdown = !state.enableCountdown;
-            if (state.enableCountdown) {
-                els.countdownBtn.classList.add('text-blue-500', 'bg-gray-700');
-            } else {
-                els.countdownBtn.classList.remove('text-blue-500', 'bg-gray-700');
-            }
-        }
-
-        function updateFontSize(size) {
-            els.display.style.fontSize = `${size}px`;
-            els.sizeVal.innerText = `${size}px`;
-        }
-
-        function updateColors(bg, text) {
-            els.prompterView.style.backgroundColor = bg;
-            els.display.style.color = text;
-        }
-
-        function updateGuideStyle(styleClass) {
-            // Keep eye contact class if active
-            const isEyeContact = els.readingGuide.classList.contains('eye-contact-active');
-            els.readingGuide.className = 'reading-guide';
-            els.readingGuide.classList.add(styleClass);
-            if (isEyeContact) els.readingGuide.classList.add('eye-contact-active');
-        }
-
-        function toggleMirror() {
-            state.isMirrored = !state.isMirrored;
-            if (state.isMirrored) {
-                els.display.classList.add('mirror-x');
-                els.mirrorBtn.classList.add('text-blue-500', 'bg-gray-800');
-            } else {
-                els.display.classList.remove('mirror-x');
-                els.mirrorBtn.classList.remove('text-blue-500', 'bg-gray-800');
-            }
-        }
-
-        // --- Keyboard Controls ---
-
-        document.addEventListener('keydown', (e) => {
-            if (els.prompterView.classList.contains('hidden')) return;
-
-            if (e.code === 'Space') {
-                e.preventDefault(); 
-                togglePlay();
-            }
-            if (e.code === 'ArrowUp') {
-                e.preventDefault();
-                state.speed = Math.min(state.speed + 1, 10);
-                els.speedRange.value = state.speed;
-                els.speedVal.innerText = state.speed;
-            }
-            if (e.code === 'ArrowDown') {
-                e.preventDefault();
-                state.speed = Math.max(state.speed - 1, 0);
-                els.speedRange.value = state.speed;
-                els.speedVal.innerText = state.speed;
-            }
-            if (e.code === 'Escape') {
-                exitPrompter();
-            }
-        });
-
-        // Auto-focus input on load
-        els.input.focus();
-
-    </script>
+    // ─── Auto-focus on load ───────────────────────────────────────────────────
+    els.input.focus();
+</script>
 </body>
 </html>
